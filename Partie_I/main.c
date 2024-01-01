@@ -107,14 +107,14 @@ int sol_progdyn(char mot[], int longueur){
     int nb=0;
     //initialisation
     bool** P= malloc((longueur+1)*sizeof(bool*));
-    for(int i=0;i<=longueur;i++){
+    for(int i=0;i<longueur+1;i++){
         P[i]=malloc(sizeof(bool)*(longueur+1));
         for(int j=0;j<=longueur;j++){
             P[i][j]=true;//Neutre pour &&.
         }
     }
     for(int i=longueur-1;i>=0;i--){
-        for(int j=1;j<=longueur;j++){
+        for(int j=1;j<longueur+1;j++){
             if(i<j){
                 P[i][j]=P[i+1][j-1]&&(mot[i]==mot[j-1]);
                 if(P[i][j])nb++;
@@ -122,37 +122,59 @@ int sol_progdyn(char mot[], int longueur){
         }
     }
     //libération
-    for(int i=0;i<=longueur;i++){
+    for(int i=0;i<longueur+1;i++){
         free(P[i]);//=malloc(sizeof(bool)*longueur);
     }
     free(P);
     return nb;
 }
 int sol_Q10(char mot[], int longueur){
+    /*
+        Attention ! Le code tel quel ne compte que les palindromes impairs !! il faut insérer
+        un caractère spécial, par exemple # pour dénombrer puis diviser le résultat par 2.
+        On le fait dans une fonction séparée.
+    */
     int nb=0;
     //initialisation
     bool** P= malloc((longueur+1)*sizeof(bool*));
-    for(int i=0;i<longueur;i++){
+    for(int i=0;i<longueur+1;i++){
         P[i]=malloc(sizeof(bool)*(longueur+1));
-        for(int j=1;j<=longueur;j++){
+        for(int j=0;j<longueur+1;j++){
             P[i][j]=true;//Neutre pour &&.
         }
     }
     for(int centre=0;centre<longueur;centre++){
+        
         for(int rayon=1;rayon<=centre;rayon++){
-             if(centre+rayon<longueur){
-                P[centre-rayon][centre+rayon]=P[centre-rayon+1][centre+rayon-1]&&(mot[centre-rayon]==mot[centre+rayon-1]);
+             if(centre+rayon<=longueur){
+                P[centre-rayon][centre+rayon]=P[centre-(rayon-1)][centre+rayon-1]&&(mot[centre-rayon]==mot[centre+rayon]);//&&(mot[centre-rayon]!='#');
                 if(P[centre-rayon][centre+rayon])nb++;
+                //if(mot[centre-rayon]==mot[centre+rayon]&&mot[centre-rayon]!='#')nb++;
             }
+            
         }
+        //if(mot[centre]!='#')
+        //nb++;//Correspond à P[centre][centre]
     }
     //libération
-    for(int i=0;i<longueur;i++){
+    for(int i=0;i<longueur+1;i++){
         free(P[i]);//=malloc(sizeof(bool)*longueur);
     }
     free(P);
-    return nb;
+    return (nb+(longueur-1)/2)/2;
 }
+char* insere_special(char* chaine, int longueur){
+    char* nouvelle_chaine = malloc(sizeof(char)*(2*longueur+2));
+    for(int i=0;i<longueur;i++){
+        nouvelle_chaine[2*i]='#';
+        nouvelle_chaine[2*i+1]=chaine[i];
+    }
+    nouvelle_chaine[2*longueur]='#';
+    nouvelle_chaine[2*longueur+1]='\0';
+    printf("%s\n",nouvelle_chaine);
+    return nouvelle_chaine;
+}
+
 int main(){
     char *entree = NULL;
     size_t len=0;
@@ -162,13 +184,24 @@ int main(){
     //printf("Chaîne lue:%s Longueur %ld \n",entree,tailleLue);
     //printf("Rappel: le caractère '\\n' n'est pas affiché\n");
     //Note that the newline character, not the null terminator, is counted in the length.
+
+    int n=tailleLue-1;//Longueur sans le caractère nul
+    //On doit prendre en compte le caractère nul pour les fonctions avec effets de bord !!!
     printf("Voir la page wikipédia pour le problème de la plus longue sous-chaîne palindromique.\n");
     printf("(Explication claire de l'algorithme de Manacher)\n");
-    printf("Nombre de palindromes dans la chaîne avec decompte_naif:%d\n",decompte_naif(entree,tailleLue-1));  
-    printf("Nombre de palindromes dans la chaîne avec decompte_naif_inline:%d\n",decompte_naif_inline(entree,tailleLue-1));   
-    printf("Nombre de palindromes dans la chaîne (faux, sujet):%d\n",faux_decompte_naif_sujet(entree,tailleLue-1));  
-    printf("Nombre de palindromes dans la chaîne en prog dyn:%d\n",sol_progdyn(entree,tailleLue-1));  
-    printf("Nombre de palindromes dans la chaîne (Sol Q10):%d\n",sol_Q10(entree,tailleLue-1));  
+    printf("Nombre de palindromes dans la chaîne avec decompte_naif:%d\n",decompte_naif(entree,n));  
+    printf("Nombre de palindromes dans la chaîne avec decompte_naif_inline:%d\n",decompte_naif_inline(entree,n));   
+    printf("Nombre de palindromes dans la chaîne (faux, sujet):%d\n",faux_decompte_naif_sujet(entree,n));  
+    printf("Nombre de palindromes dans la chaîne en prog dyn:%d\n",sol_progdyn(entree,n));  
+
+    char* chaine_speciale = insere_special(entree,n);
+    int nb=sol_Q10(chaine_speciale,2*n+1);
+    //int nb = 666;
+    printf("%s\n",chaine_speciale);
+    printf("Nombre de palindromes dans la chaîne (Sol Q10):%d\n",nb);  
+
+
+    free(chaine_speciale);
     //affiche_tous_facteurs(entree,tailleLue-1);//On ne passe pas le caractère \n
     if(est_palindrome(entree,tailleLue-1)){
         printf("Le mot entré est un palindrome\n");
