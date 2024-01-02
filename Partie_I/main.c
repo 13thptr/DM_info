@@ -124,12 +124,17 @@ int sol_progdyn(char mot[], int longueur){
     free(P);
     return nb;
 }
+char* insere_special(char* chaine, int longueur){
+    char* nouvelle_chaine = malloc(sizeof(char)*(2*longueur+2));
+    for(int i=0;i<longueur;i++){
+        nouvelle_chaine[2*i]='#';
+        nouvelle_chaine[2*i+1]=chaine[i];
+    }
+    nouvelle_chaine[2*longueur]='#';
+    nouvelle_chaine[2*longueur+1]='\0';
+    return nouvelle_chaine;
+}
 int sol_Q10(char mot[], int longueur){
-    /*
-        Attention ! Le code tel quel ne compte que les palindromes impairs !! il faut insérer
-        un caractère spécial, par exemple # pour dénombrer puis diviser le résultat par 2.
-        On le fait dans une fonction séparée. -> en fait non...on doit gérer le caractère spécial de l'intérieur.
-    */
     int nb=0;
     bool** P= malloc((longueur+1)*sizeof(bool*));
     for(int i=0;i<longueur+1;i++){
@@ -151,18 +156,48 @@ int sol_Q10(char mot[], int longueur){
         free(P[i]);
     }
     free(P);
-    return (nb+(longueur-1)/2)/2;//Cf. Q7, Q8 pour l'explication sur les doublons. 
+    return nb+longueur;
 }
-char* insere_special(char* chaine, int longueur){
-    char* nouvelle_chaine = malloc(sizeof(char)*(2*longueur+2));
-    for(int i=0;i<longueur;i++){
-        nouvelle_chaine[2*i]='#';
-        nouvelle_chaine[2*i+1]=chaine[i];
+int base_sur_Q10(char mot[], int longueur){
+    char* chaine_speciale = insere_special(mot,longueur);
+    int nb = sol_Q10(chaine_speciale,2*longueur+1)-longueur-1;//On compte "longueur" ou "longueur+1" symboles spéciaux dans les palindromes impairs
+    free(chaine_speciale);
+    return nb/2;//Cf. Q7, Q8 pour l'explication sur les doublons. 
+}
+/*
+Q11. Soient u ∈ Σ∗ , i ∈ [[0, |u| − 1]] et 0 < j ∈ [[1, ρ̂i ]]. En exploitant les différentes symétries, montrer
+qu’il existe un palindrome centré en i+ j de rayon min(ρ(i)− j, ρ(i− j)). En déduire ρ̂i+ j ≥ min(ρ̂i − j, ρ̂i− j ).
+Préciser à quelle condition il y a égalité.
+*/
+
+//La fonction suivante est dans le même esprit que facteur_palindrome.
+bool palindrome_centre(char* mot, int centre, int rayon,int longueur){
+    assert(0<=centre-rayon&&centre+rayon<=longueur);//convention du sujet, l'indice de fin est exclus
+    for(int r=0;r<=rayon;r++){
+        if(mot[centre+r]!=mot[centre-r]){
+            return false;
+        }
     }
-    nouvelle_chaine[2*longueur]='#';
-    nouvelle_chaine[2*longueur+1]='\0';
-    printf("%s\n",nouvelle_chaine);
-    return nouvelle_chaine;
+    return true;
+}
+int rayon_max(char *mot, int longueur,int centre){
+    //Renvoie le rayon maximal des palindromes centrés en "centre".
+    assert(0<=centre&&centre<longueur);
+    int r=0;
+    while(0<=centre-r&&centre+r<longueur&&mot[centre+r]==mot[centre-r]){
+        r++;
+    }
+    return r-1;
+}
+int min(int a, int b){
+    return a<b?a:b;
+}
+bool verif_Q11(char* mot, int longueur,int i, int j){
+    assert(0<=i&&i<=longueur-1);
+    int r_i=rayon_max(mot,longueur,i);
+    assert(1<=j&&j<=r_i);
+    int r_imj=rayon_max(mot,longueur,i-j);
+    return min(r_i-j,r_imj)==rayon_max(mot,longueur,i+j);
 }
 
 int main(){
@@ -182,21 +217,45 @@ int main(){
     printf("Nombre de palindromes dans la chaîne avec decompte_naif_inline:%d\n",decompte_naif_inline(entree,n));   
     
     printf("Nombre de palindromes dans la chaîne en prog dyn:%d\n",sol_progdyn(entree,n));  
-
-    char* chaine_speciale = insere_special(entree,n);
-    int nb=sol_Q10(chaine_speciale,2*n+1);
-    printf("%s\n",chaine_speciale);
-    printf("Nombre de palindromes dans la chaîne (Sol Q10):%d\n",nb);  
+    printf("Nombre de palindromes IMPAIRS dans la chaîne (Q10):%d\n",sol_Q10(entree,n));  
 
 
-    free(chaine_speciale);
+    //char* chaine_speciale = insere_special(entree,n);
+    int nb=base_sur_Q10(entree,n);
+    //printf("%s\n",entree);
+    printf("Nombre de palindromes (pairs&impairs) dans la chaîne (à l'aide de Q7, Q8, Q10):%d\n",nb);  
     affiche_tous_facteurs(entree,tailleLue-1);//On ne passe pas le caractère \n
     if(est_palindrome(entree,tailleLue-1)){
-        printf("Le mot entré est un palindrome\n");
+        printf("Le mot entré est un palindrome.\n");
     }else{
         printf("Le mot entré n'est pas un palindrome.\n");
     }
-    printf("Test d'appartenance facteur/mot:");
+    printf("Test de la fonction palindrome_centre: \n");
+    printf("Entrez une chaîne de caractères contenant un palindrome centré:\n");
+    char *test=NULL;
+    size_t len_test=0;
+    __ssize_t tl=getline(&test,&len_test,stdin);
+    printf("Entrez l'indice du centre:\n");
+    int centre=0;
+    scanf("%d",&centre);
+    printf("Entrez le rayon:\n");
+    int rayon=0;
+    scanf("%d",&rayon);
+    printf("Rayon maximal des palindromes centrés en \"%c\" :%d\n",test[centre],rayon_max(test,tl-1,centre));
+
+    if(palindrome_centre(test,centre,rayon,tl-1)){
+        printf("\"%.*s\" contient un palindrome centré en %c de rayon %d\n",(int)tl-1,test,test[centre],rayon);
+    }
+    int j=0;
+    scanf("%d",&j);
+    if(verif_Q11(test,tl-1,centre,j)){
+        printf("Le résultat de Q11 est vérifié.\n");
+    }
+    else{
+        printf("Le résultat de Q11 n'est pas vérifié.\n");
+    }
+    free(test);
+    printf("Test d'appartenance facteur/mot:\n");
     printf("Entrez un premier mot:\n");
     char *mot = NULL;
     size_t len_mot=0;
